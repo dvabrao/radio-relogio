@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
             });
         }
         @JavascriptInterface
-        public String version() { return "1.0"; }
+        public String version() { return "1.1"; }
     }
 
     @SuppressWarnings("deprecation")

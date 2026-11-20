@@ -24,6 +24,7 @@ html,body{margin:0;height:100%;background:#000;color:var(--uitx);overflow:hidden
 .f-serif{font-family:Georgia,"Noto Serif",serif;font-weight:400}
 .ampm{font-size:.28em;margin-left:.25em;align-self:flex-end;font-family:Roboto,Arial,sans-serif}
 svg{display:block;overflow:visible}
+.ic{display:inline-block;width:1em;height:1em;vertical-align:-.12em;fill:currentColor;margin-right:.3em}
 
 /* indicadores discretos */
 #ind{position:fixed;left:2vmin;bottom:2vmin;display:flex;gap:2.5vmin;font-size:2.6vmin;color:var(--c);opacity:calc(var(--op)*.55);pointer-events:none}
@@ -108,7 +109,7 @@ a{color:var(--c)}
 <div id="ctl">
   <div class="row" id="top">
     <span id="title">Rádio Relógio do Daniel</span>
-    <button class="btn" id="bSleep">⏾ Timer</button>
+    <button class="btn" id="bSleep"><svg class=ic viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>Timer</button>
     <button class="btn" id="bFont">Fonte</button>
     <button class="btn" id="bFull">⛶</button>
     <button class="btn big" id="bCfg">⚙</button>
@@ -137,6 +138,7 @@ a{color:var(--c)}
       <div class="it"><label>Separador da data</label><select id="sSep"><option value=".">19.11.2026</option><option value="/">19/11/2026</option><option value="-">19-11-2026</option></select></div>
       <div class="it"><label>Movimento contra desgaste da tela</label><select id="sDrift"><option value="0">Desligado</option><option value="1">Suave</option><option value="2">Médio</option><option value="3">Amplo</option></select></div>
       <div class="it"><label>LEDs apagados visíveis (fonte Pontinhos e 7 segmentos)</label><label class="sw"><input type="checkbox" id="cGhost"><span></span></label></div>
+      <p class="small">No computador: roda do mouse muda o tamanho; F = tela cheia; espaço = tocar/parar; setas ↑↓ = volume; ←→ = brilho.</p>
       <p class="small">Atalhos na tela: pinça com dois dedos muda o tamanho; arrastar no lado esquerdo muda o brilho; no lado direito, o volume. Toque rápido mostra os botões.</p>
     </div>
 
@@ -176,7 +178,7 @@ a{color:var(--c)}
     <div class="pg" id="pSob">
       <div class="about">
         <b>Rádio Relógio do Daniel</b><br>
-        versão 1.0<br><br>
+        versão <span id="appVer"></span><br><br>
         criado por <b style="font-size:inherit">Daniel Vale Abrão</b><br>
         contato: <a href="mailto:dvabrao@gmail.com">dvabrao@gmail.com</a><br><br>
         <span class="small">Ribeirão Preto · SP · 2026</span><br><br>
@@ -187,7 +189,7 @@ a{color:var(--c)}
 </div>
 
 <div id="alarm">
-  <div id="alLbl">⏰ Alarme</div>
+  <div id="alLbl"><svg class=ic viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 0 0 2.4-2h-4.8a2.5 2.5 0 0 0 2.4 2zm7-6V11a7 7 0 0 0-5.5-6.8V3.5a1.5 1.5 0 0 0-3 0v.7A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>Alarme</div>
   <div id="alTime">06:30</div>
   <div id="alBtns"><button id="alSnooze">Soneca 5 min</button><button id="alStop">Desligar</button></div>
 </div>
@@ -200,6 +202,8 @@ a{color:var(--c)}
 'use strict';
 const $=id=>document.getElementById(id);
 const BRIDGE=window.AndroidApp||null;
+const APP_VERSION='1.1';
+const MOON='<svg class=ic viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>',BELL='<svg class=ic viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 0 0 2.4-2h-4.8a2.5 2.5 0 0 0 2.4 2zm7-6V11a7 7 0 0 0-5.5-6.8V3.5a1.5 1.5 0 0 0-3 0v.7A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>';
 
 /* ---------- configurações ---------- */
 const RADIOS_DEF=[
@@ -399,9 +403,9 @@ function nextAlarm(){const now=new Date();let best=null;
 function indicators(){
   const r=playing&&!alarmOn?S.radios.find(x=>x.k===playing):null;
   $('iRadio').textContent=r?('♪ '+r.n+(radioState?' · '+radioState:'')):'';
-  $('iSleep').textContent=sleepEnd?('⏾ '+Math.ceil((sleepEnd-Date.now())/60000)+' min'):'';
+  $('iSleep').innerHTML=sleepEnd?(MOON+Math.ceil((sleepEnd-Date.now())/60000)+' min'):'';
   const na=nextAlarm();
-  $('iAlarm').textContent=snoozeUntil?('⏰ soneca '+Math.ceil((snoozeUntil-Date.now())/60000)+' min'):(na?('⏰ '+p2(na.getHours())+':'+p2(na.getMinutes())):'');
+  $('iAlarm').innerHTML=snoozeUntil?(BELL+'soneca '+Math.ceil((snoozeUntil-Date.now())/60000)+' min'):(na?(BELL+p2(na.getHours())+':'+p2(na.getMinutes())):'');
 }
 
 /* ---------- controles na tela ---------- */
@@ -417,12 +421,25 @@ function buildBot(){
     x.onclick=()=>playing===r.k?stopRadio():playRadio(r.k);b.appendChild(x)});
 }
 const SLEEPS=[0,15,30,45,60,90,120];
-function buildTop(){const rem=sleepEnd?Math.ceil((sleepEnd-Date.now())/60000):0;$('bSleep').textContent=rem?`⏾ ${rem} min`:'⏾ Timer';$('bSleep').classList.toggle('on',!!rem)}
+function buildTop(){const rem=sleepEnd?Math.ceil((sleepEnd-Date.now())/60000):0;$('bSleep').innerHTML=MOON+(rem?`${rem} min`:'Timer');$('bSleep').classList.toggle('on',!!rem)}
 $('bSleep').onclick=()=>{const rem=sleepEnd?Math.ceil((sleepEnd-Date.now())/60000):0;let i=SLEEPS.findIndex(s=>s>=rem&&s!==0&&s>rem-1);
   if(rem===0)i=SLEEPS.indexOf(S.sleepDef);else{i=SLEEPS.findIndex(s=>s>rem);if(i<0)i=0;}
   setSleep(SLEEPS[i]||0);if(SLEEPS[i]&&!playing)playRadio(S.last);hud('Desligar rádio em',SLEEPS[i]?SLEEPS[i]+' min':'desligado',null)};
 $('bFont').onclick=()=>{const i=FONTS.findIndex(f=>f[0]===S.font);S.font=FONTS[(i+1)%FONTS.length][0];save();lastKey='';tick(true);hud('Fonte',FONTS.find(f=>f[0]===S.font)[1],null)};
 $('bFull').onclick=toggleFull;
+if(BRIDGE)$('bFull').style.display='none';
+$('appVer').textContent=APP_VERSION+(BRIDGE?' (Android)':' (navegador)');
+document.title='Rádio Relógio do Daniel '+APP_VERSION;
+// computador: roda do mouse = tamanho; teclas F, espaço, setas
+addEventListener('wheel',e=>{if(e.target.closest('#cfg'))return;S.size=Math.max(15,Math.min(100,S.size+(e.deltaY<0?3:-3)));lastKey='';tick(true);hud('Tamanho',S.size+'%',(S.size-15)/85*100);save()},{passive:true});
+addEventListener('keydown',e=>{if(e.target.closest('input,select')||$('cfg').classList.contains('show'))return;
+  const k=e.key;
+  if(k==='f'||k==='F')toggleFull();
+  else if(k===' '){e.preventDefault();playing?stopRadio():playRadio(S.last||S.radios[0].k)}
+  else if(k==='ArrowUp'||k==='ArrowDown'){S.vol=Math.max(0,Math.min(100,S.vol+(k==='ArrowUp'?5:-5)));if(!alarmOn)setVol(S.vol);hud('Volume',S.vol+'%',S.vol);save()}
+  else if(k==='ArrowRight'||k==='ArrowLeft'){const v=Math.max(1,Math.min(100,curBri()+(k==='ArrowRight'?5:-5)));if(isNight())S.nbri=v;else S.bri=v;applyLook();hud('Brilho',v+'%',v);save()}
+  else if(k==='Escape'){hideCtl()}
+});
 $('bCfg').onclick=()=>{hideCtl();openCfg()};
 function toggleFull(){const d=document,el=d.documentElement;
   if(d.fullscreenElement||d.webkitFullscreenElement){(d.exitFullscreen||d.webkitExitFullscreen).call(d)}

@@ -16,13 +16,20 @@ jobs:
         with: { gradle-version: '8.9' }
       - name: Compilar
         run: gradle assembleDebug --no-daemon
-      - name: Renomear
-        run: cp app/build/outputs/apk/debug/app-debug.apk RadioRelogioDoDaniel.apk
+      - name: Ler versão e renomear
+        run: |
+          VER=$(grep -oP "versionName '\K[^']+" app/build.gradle)
+          echo "VER=$VER" >> $GITHUB_ENV
+          cp app/build/outputs/apk/debug/app-debug.apk "RadioRelogioDoDaniel-v$VER.apk"
+          cp app/src/main/assets/index.html "RadioRelogioDoDaniel-v$VER.html"
       - uses: actions/upload-artifact@v4
-        with: { name: RadioRelogioDoDaniel, path: RadioRelogioDoDaniel.apk }
+        with: { name: RadioRelogioDoDaniel-v${{ env.VER }}, path: "RadioRelogioDoDaniel-v*" }
       - name: Publicar versão para baixar no celular
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Rádio Relógio do Daniel 1.0.${{ github.run_number }}
-          files: RadioRelogioDoDaniel.apk
+          tag_name: v${{ env.VER }}
+          name: Rádio Relógio do Daniel ${{ env.VER }}
+          make_latest: true
+          files: |
+            RadioRelogioDoDaniel-v${{ env.VER }}.apk
+            RadioRelogioDoDaniel-v${{ env.VER }}.html
