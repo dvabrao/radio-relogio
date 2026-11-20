@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Rádio Relógio do Daniel</title>
+<style>
+:root{--c:#ffb347;--op:.6;--ui:#1a1a1a;--uitx:#cfcfcf}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#000;color:var(--uitx);overflow:hidden;
+  font-family:Roboto,"Segoe UI",Helvetica,Arial,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#wander{display:flex;flex-direction:column;align-items:center;color:var(--c);opacity:var(--op);
+  transition:transform 2s linear, opacity .4s}
+#clock,#dline,#wline{display:flex;align-items:center;justify-content:center;white-space:nowrap;line-height:1}
+#dline{margin-top:.25em}
+#wline{margin-top:.2em}
+.tx{font-variant-numeric:tabular-nums;line-height:1}
+.f-thin{font-family:"sans-serif-thin",Roboto,"Helvetica Neue",Arial,sans-serif;font-weight:100}
+.f-bold{font-family:"sans-serif-black",Roboto,Arial,sans-serif;font-weight:900}
+.f-mono{font-family:"Roboto Mono","DejaVu Sans Mono","Courier New",monospace;font-weight:400}
+.f-serif{font-family:Georgia,"Noto Serif",serif;font-weight:400}
+.ampm{font-size:.28em;margin-left:.25em;align-self:flex-end;font-family:Roboto,Arial,sans-serif}
+svg{display:block;overflow:visible}
+
+/* indicadores discretos */
+#ind{position:fixed;left:2vmin;bottom:2vmin;display:flex;gap:2.5vmin;font-size:2.6vmin;color:var(--c);opacity:calc(var(--op)*.55);pointer-events:none}
+#ind span:empty{display:none}
+
+/* HUD de gesto */
+#hud{position:fixed;left:50%;top:12%;transform:translateX(-50%);background:rgba(20,20,20,.85);color:#ddd;
+  padding:1.6vmin 3vmin;border-radius:3vmin;font-size:3.4vmin;display:none;pointer-events:none;z-index:30;min-width:30vmin;text-align:center}
+#hud .bar{height:1vmin;background:#333;border-radius:1vmin;margin-top:1vmin;overflow:hidden}
+#hud .bar i{display:block;height:100%;background:var(--c)}
+
+/* controles */
+#ctl{position:fixed;inset:0;display:none;z-index:20;pointer-events:none}
+#ctl.show{display:block}
+.row{position:absolute;left:0;right:0;display:flex;gap:1.6vmin;padding:2vmin 2.5vmin;align-items:center;pointer-events:auto}
+#top{top:0;justify-content:flex-end;background:linear-gradient(#000c,#0000)}
+#bot{bottom:0;flex-wrap:nowrap;overflow-x:auto;background:linear-gradient(#0000,#000c);scrollbar-width:none}
+#bot::-webkit-scrollbar{display:none}
+.btn{background:var(--ui);color:var(--uitx);border:1px solid #333;border-radius:5vmin;padding:1.6vmin 2.6vmin;
+  font-size:3vmin;font-weight:600;white-space:nowrap;flex:0 0 auto;cursor:pointer;font-family:inherit}
+.btn.on{border-color:var(--c);color:var(--c)}
+.btn.big{font-size:3.6vmin}
+#title{margin-right:auto;font-size:2.6vmin;opacity:.6}
+
+/* painel de configurações */
+#cfg{position:fixed;inset:0;background:#0b0b0b;z-index:40;display:none;flex-direction:column;touch-action:pan-y}
+#cfg.show{display:flex}
+#cfgHead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #222}
+#cfgHead h2{margin:0;font-size:18px;font-weight:600;flex:1;color:#ddd}
+#tabs{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;border-bottom:1px solid #1c1c1c;flex:0 0 auto}
+.tab{background:#161616;border:1px solid #2a2a2a;color:#aaa;padding:8px 14px;border-radius:20px;font-size:14px;white-space:nowrap}
+.tab.on{color:var(--c);border-color:var(--c)}
+#cfgBody{flex:1;overflow-y:auto;padding:12px 16px 40px;-webkit-overflow-scrolling:touch}
+.pg{display:none;max-width:760px;margin:0 auto}
+.pg.on{display:block}
+.it{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #1a1a1a;font-size:15px;color:#ccc;flex-wrap:wrap}
+.it label{flex:1;min-width:140px}
+.it input[type=range]{flex:2;min-width:160px;accent-color:var(--c)}
+.it select,.it input[type=time],.it input[type=text],.it input[type=url]{background:#151515;color:#ddd;border:1px solid #333;border-radius:8px;padding:8px;font-size:15px;font-family:inherit}
+.val{min-width:44px;text-align:right;color:var(--c);font-variant-numeric:tabular-nums}
+.it label.sw,.sw{position:relative;width:48px;height:28px;flex:0 0 48px;min-width:0}
+.sw input{opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;background:#333;border-radius:28px;transition:.2s}
+.sw span:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#999;border-radius:50%;transition:.2s}
+.sw input:checked+span{background:color-mix(in srgb,var(--c) 45%,#222)}
+.sw input:checked+span:before{transform:translateX(20px);background:var(--c)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:#151515;border:1px solid #333;color:#bbb;border-radius:18px;padding:7px 12px;font-size:14px}
+.chip.on{border-color:var(--c);color:var(--c)}
+.sw8{width:34px;height:34px;border-radius:50%;border:2px solid #333}
+.sw8.on{border-color:#fff}
+.fontprev{display:flex;align-items:center;justify-content:center;height:56px;min-width:120px;padding:6px 10px;color:var(--c)}
+.fbox{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;width:100%}
+.fbox .chip{display:flex;flex-direction:column;align-items:center;padding:8px}
+.card{background:#111;border:1px solid #222;border-radius:12px;padding:10px 12px;margin:12px 0}
+.card h3{margin:2px 0 6px;font-size:15px;color:#ddd;display:flex;align-items:center;justify-content:space-between}
+.days{display:flex;gap:5px;flex-wrap:wrap}
+.days .chip{min-width:40px;text-align:center;padding:7px 6px}
+.rad{display:grid;grid-template-columns:70px 1fr 1.6fr 36px;gap:6px;align-items:center;margin:6px 0}
+.rad input{width:100%;background:#151515;color:#ddd;border:1px solid #333;border-radius:8px;padding:7px;font-size:13px}
+.x{background:#2a1515;color:#f88;border:1px solid #533;border-radius:8px;height:34px}
+.small{font-size:12px;color:#777;line-height:1.5}
+.about{text-align:center;padding:30px 10px;color:#bbb;line-height:1.8}
+.about b{color:var(--c);font-size:20px}
+a{color:var(--c)}
+
+/* tela de alarme */
+#alarm{position:fixed;inset:0;background:#000;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:5vmin;touch-action:manipulation}
+#alarm.show{display:flex}
+#alTime{font-size:22vmin;color:var(--c);font-weight:200;font-variant-numeric:tabular-nums}
+#alLbl{font-size:4vmin;color:#aaa}
+#alBtns{display:flex;gap:5vmin}
+#alBtns button{font-size:5.5vmin;padding:4vmin 7vmin;border-radius:6vmin;border:2px solid #444;background:#151515;color:#ddd;font-family:inherit}
+#alSnooze{border-color:var(--c)!important;color:var(--c)!important}
+</style>
+</head>
+<body>
+<div id="stage"><div id="wander"><div id="clock"></div><div id="dline"></div><div id="wline"></div></div></div>
+<div id="ind"><span id="iRadio"></span><span id="iSleep"></span><span id="iAlarm"></span></div>
+<div id="hud"><div id="hudT"></div><div class="bar"><i id="hudB"></i></div></div>
+
+<div id="ctl">
+  <div class="row" id="top">
+    <span id="title">Rádio Relógio do Daniel</span>
+    <button class="btn" id="bSleep">⏾ Timer</button>
+    <button class="btn" id="bFont">Fonte</button>
+    <button class="btn" id="bFull">⛶</button>
+    <button class="btn big" id="bCfg">⚙</button>
+  </div>
+  <div class="row" id="bot"></div>
+</div>
+
+<div id="cfg">
+  <div id="cfgHead"><h2>Configurações</h2><button class="btn" id="cfgClose" style="font-size:16px;padding:8px 16px">Fechar ✕</button></div>
+  <div id="tabs">
+    <button class="tab on" data-p="pRel">Relógio</button>
+    <button class="tab" data-p="pCor">Cor e brilho</button>
+    <button class="tab" data-p="pRad">Rádios</button>
+    <button class="tab" data-p="pAl">Alarmes</button>
+    <button class="tab" data-p="pSob">Sobre</button>
+  </div>
+  <div id="cfgBody">
+    <div class="pg on" id="pRel">
+      <div class="it" style="display:block"><label>Fonte da hora</label><div class="fbox" id="fontBox" style="margin-top:8px"></div></div>
+      <div class="it"><label>Tamanho da hora</label><input type="range" id="sSize" min="15" max="100"><span class="val" id="vSize"></span></div>
+      <div class="it"><label>Tamanho da data</label><input type="range" id="sDate" min="10" max="100"><span class="val" id="vDate"></span></div>
+      <div class="it"><label>Mostrar segundos</label><label class="sw"><input type="checkbox" id="cSec"><span></span></label></div>
+      <div class="it"><label>Mostrar data</label><label class="sw"><input type="checkbox" id="cDate"><span></span></label></div>
+      <div class="it"><label>Mostrar dia da semana</label><label class="sw"><input type="checkbox" id="cWeek"><span></span></label></div>
+      <div class="it"><label>Formato 24 horas</label><label class="sw"><input type="checkbox" id="c24"><span></span></label></div>
+      <div class="it"><label>Separador da data</label><select id="sSep"><option value=".">19.11.2026</option><option value="/">19/11/2026</option><option value="-">19-11-2026</option></select></div>
+      <div class="it"><label>Movimento contra desgaste da tela</label><select id="sDrift"><option value="0">Desligado</option><option value="1">Suave</option><option value="2">Médio</option><option value="3">Amplo</option></select></div>
+      <div class="it"><label>LEDs apagados visíveis (fonte Pontinhos e 7 segmentos)</label><label class="sw"><input type="checkbox" id="cGhost"><span></span></label></div>
+      <p class="small">Atalhos na tela: pinça com dois dedos muda o tamanho; arrastar no lado esquerdo muda o brilho; no lado direito, o volume. Toque rápido mostra os botões.</p>
+    </div>
+
+    <div class="pg" id="pCor">
+      <div class="it" style="display:block"><label>Cor do texto</label><div class="chips" id="colBox" style="margin-top:8px"></div></div>
+      <div class="it"><label>Cor personalizada</label><input type="color" id="cCustom" style="width:60px;height:36px;border:0;background:none"></div>
+      <div class="it"><label>Brilho (dia)</label><input type="range" id="sBri" min="1" max="100"><span class="val" id="vBri"></span></div>
+      <div class="card">
+        <h3>Modo noite automático <label class="sw"><input type="checkbox" id="cNight"><span></span></label></h3>
+        <div class="it"><label>Começa às</label><input type="time" id="tNs"></div>
+        <div class="it"><label>Termina às</label><input type="time" id="tNe"></div>
+        <div class="it"><label>Brilho à noite</label><input type="range" id="sNBri" min="1" max="100"><span class="val" id="vNBri"></span></div>
+        <div class="it" style="display:block"><label>Cor à noite</label><div class="chips" id="ncolBox" style="margin-top:8px"></div></div>
+        <p class="small">Dica: vermelho ou âmbar fraco atrapalham menos o sono.</p>
+      </div>
+      <p class="small" id="briNote"></p>
+    </div>
+
+    <div class="pg" id="pRad">
+      <div class="it"><label>Volume</label><input type="range" id="sVol" min="0" max="100"><span class="val" id="vVol"></span></div>
+      <div class="it"><label>Timer padrão para desligar</label><select id="sSleepDef"></select></div>
+      <div class="card"><h3>Rádios</h3>
+        <div class="rad small"><span>Botão</span><span>Nome</span><span>Endereço</span><span></span></div>
+        <div id="radList"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn" id="radAdd" style="font-size:14px">+ Adicionar rádio</button>
+          <button class="btn" id="radReset" style="font-size:14px">Restaurar rádios padrão</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pg" id="pAl">
+      <div id="alList"></div>
+      <p class="small">Se a rádio escolhida não tocar em 15 segundos (internet fora, por exemplo), o alarme troca sozinho para o bipe. O volume sobe aos poucos até o máximo escolhido.</p>
+    </div>
+
+    <div class="pg" id="pSob">
+      <div class="about">
+        <b>Rádio Relógio do Daniel</b><br>
+        versão 1.0<br><br>
+        criado por <b style="font-size:inherit">Daniel Vale Abrão</b><br>
+        contato: <a href="mailto:dvabrao@gmail.com">dvabrao@gmail.com</a><br><br>
+        <span class="small">Ribeirão Preto · SP · 2026</span><br><br>
+        <button class="btn" id="bResetAll" style="font-size:14px">Restaurar todas as configurações</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="alarm">
+  <div id="alLbl">⏰ Alarme</div>
+  <div id="alTime">06:30</div>
+  <div id="alBtns"><button id="alSnooze">Soneca 5 min</button><button id="alStop">Desligar</button></div>
+</div>
+
+<audio id="au" preload="none"></audio>
+<audio id="beep" loop></audio>
+
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const BRIDGE=window.AndroidApp||null;
+
+/* ---------- configurações ---------- */
+const RADIOS_DEF=[
+ {k:'DIAR',n:'Diário FM 99.7',u:'https://rrdns-megasistema.webnow.com.br/diario.aac'},
+ {k:'MLDY',n:'Melody FM 94.1',u:'https://sc4s.cdn.upx.com:8080/stream'},
+ {k:'JPNW',n:'JP News 107.5',u:'https://servidor15.brlogic.com:7168/live'},
+ {k:'JPFM',n:'JP FM Curitiba 103.9',u:'https://ice4.fabricahost.com.br/jpcuritiba'},
+ {k:'CLSC',n:'Classic Pan',u:'https://stream.zeno.fm/rtk4pzcome3vv'},
+ {k:'89RK',n:'89 FM A Rádio Rock',u:'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_89FM_SC'},
+ {k:'MIX',n:'Mix FM 106.3',u:'https://playerservices.streamtheworld.com/api/livestream-redirect/MIXFM_SAOPAULOAAC_SC'},
+ {k:'TRNS',n:'Transamérica 100.1',u:'https://playerservices.streamtheworld.com/api/livestream-redirect/RT_SPAAC_SC'},
+ {k:'ANT1',n:'Antena 1 94.5',u:'http://antena1.newradio.it/stream2'}
+];
+const mkAlarm=t=>({on:false,time:t,days:[0,1,1,1,1,1,0],src:'beep',vol:80,ramp:60,snooze:5});
+const DEF={font:'led',size:70,dateSize:40,sec:true,date:true,week:true,h24:true,sep:'.',drift:1,ghost:false,
+  color:'#ffb347',bri:50,night:false,ns:'22:00',ne:'06:30',nbri:12,ncolor:'#ff4d4d',
+  vol:70,last:'DIAR',sleepDef:30,radios:RADIOS_DEF,alarms:[mkAlarm('06:30'),mkAlarm('07:00'),mkAlarm('08:00')]};
+let S;
+function load(){try{S=Object.assign(JSON.parse(JSON.stringify(DEF)),JSON.parse(localStorage.getItem('rrd')||'{}'))}catch(e){S=JSON.parse(JSON.stringify(DEF))}
+  if(!Array.isArray(S.radios)||!S.radios.length)S.radios=JSON.parse(JSON.stringify(RADIOS_DEF));
+  if(!Array.isArray(S.alarms)||S.alarms.length<3)S.alarms=DEF.alarms;}
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem('rrd',JSON.stringify(S))}catch(e){}},300)}
+load();
+
+const COLORS=[['Âmbar','#ffb347'],['Laranja','#ff8c42'],['Vermelho','#ff4d4d'],['Rosa','#ff7eb6'],['Lilás','#c58cff'],
+  ['Azul','#6d8cff'],['Ciano','#4dd8ff'],['Verde','#4dff88'],['Lima','#c8ff4d'],['Branco','#e8e8e8']];
+const FONTS=[['led','Pontinhos'],['seg','7 segmentos'],['thin','Digital fina'],['bold','Grossa'],['mono','Máquina'],['serif','Clássica']];
+const WEEK=['DOMINGO','SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SÁBADO'];
+
+/* ---------- fonte de pontinhos 5x7 ---------- */
+const G={
+'0':['01110','10001','10011','10101','11001','10001','01110'],'1':['00100','01100','00100','00100','00100','00100','01110'],
+'2':['01110','10001','00001','00010','00100','01000','11111'],'3':['11111','00010','00100','00010','00001','10001','01110'],
+'4':['00010','00110','01010','10010','11111','00010','00010'],'5':['11111','10000','11110','00001','00001','10001','01110'],
+'6':['00110','01000','10000','11110','10001','10001','01110'],'7':['11111','00001','00010','00100','01000','01000','01000'],
+'8':['01110','10001','10001','01110','10001','10001','01110'],'9':['01110','10001','10001','01111','00001','00010','01100'],
+':':['00','11','11','00','11','11','00'],'.':['00','00','00','00','00','11','11'],'/':['00001','00001','00010','00100','01000','10000','10000'],
+'-':['000','000','000','111','000','000','000'],' ':['000','000','000','000','000','000','000'],
+'A':['01110','10001','10001','11111','10001','10001','10001'],'B':['11110','10001','10001','11110','10001','10001','11110'],
+'C':['01110','10001','10000','10000','10000','10001','01110'],'D':['11100','10010','10001','10001','10001','10010','11100'],
+'E':['11111','10000','10000','11110','10000','10000','11111'],'F':['11111','10000','10000','11110','10000','10000','10000'],
+'G':['01110','10001','10000','10111','10001','10001','01111'],'I':['111','010','010','010','010','010','111'],
+'M':['10001','11011','10101','10101','10001','10001','10001'],'N':['10001','10001','11001','10101','10011','10001','10001'],
+'O':['01110','10001','10001','10001','10001','10001','01110'],'P':['11110','10001','10001','11110','10000','10000','10000'],
+'Q':['01110','10001','10001','10001','10101','10010','01101'],'R':['11110','10001','10001','11110','10100','10010','10001'],
+'S':['01111','10000','10000','01110','00001','00001','11110'],'T':['11111','00100','00100','00100','00100','00100','00100'],
+'U':['10001','10001','10001','10001','10001','10001','01110'],'X':['10001','10001','01010','00100','01010','10001','10001']};
+function ledSVG(str,h){
+  str=str.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+  let x=0,out='';
+  for(const ch of str){const g=G[ch]||G[' '];const w=g[0].length;
+    for(let r=0;r<7;r++)for(let c=0;c<w;c++){const on=g[r][c]==='1';
+      if(on||S.ghost)out+=`<rect x="${x+c+.09}" y="${r+.09}" width=".82" height=".82" rx=".08"${on?'':' opacity=".07"'}/>`;}
+    x+=w+1;}
+  x-=1;return `<svg viewBox="0 0 ${x} 7" style="height:${h}px;width:${h*x/7}px" fill="currentColor">${out}</svg>`;
+}
+/* ---------- 7 segmentos ---------- */
+const SEGD={'0':'abcdef','1':'bc','2':'abged','3':'abgcd','4':'fgbc','5':'afgcd','6':'afgedc','7':'abc','8':'abcdefg','9':'abcdfg','-':'g',' ':''};
+function hseg(x1,x2,y,t){return `${x1},${y} ${x1+t/2},${y-t/2} ${x2-t/2},${y-t/2} ${x2},${y} ${x2-t/2},${y+t/2} ${x1+t/2},${y+t/2}`}
+function vseg(x,y1,y2,t){return `${x},${y1} ${x+t/2},${y1+t/2} ${x+t/2},${y2-t/2} ${x},${y2} ${x-t/2},${y2-t/2} ${x-t/2},${y1+t/2}`}
+const T=2.4,g=.5,L=1.5,R=10.5,TP=1.5,M=11,B=20.5;
+const SEGP={a:hseg(L+g,R-g,TP,T),g:hseg(L+g,R-g,M,T),d:hseg(L+g,R-g,B,T),f:vseg(L,TP+g,M-g,T),b:vseg(R,TP+g,M-g,T),e:vseg(L,M+g,B-g,T),c:vseg(R,M+g,B-g,T)};
+function segSVG(str,h){let x=0,out='';
+  for(const ch of str){
+    if(ch===':'){out+=`<rect x="${x+.8}" y="6" width="2.4" height="2.4" rx=".4"/><rect x="${x+.8}" y="14" width="2.4" height="2.4" rx=".4"/>`;x+=4+1.5;continue;}
+    if(ch==='.'||ch==='/'){out+=`<rect x="${x+.6}" y="19.3" width="2.4" height="2.4" rx=".4"/>`;x+=3.6+1.5;continue;}
+    const on=SEGD[ch]??'';
+    for(const s of 'abcdefg'){const lit=on.includes(s);if(lit||S.ghost)out+=`<polygon transform="translate(${x},0)" points="${SEGP[s]}"${lit?'':' opacity=".07"'}/>`;}
+    x+=12+1.5;}
+  x-=1.5;return `<svg viewBox="0 0 ${x} 22" style="height:${h}px;width:${h*x/22}px;transform:skewX(-5deg)" fill="currentColor">${out}</svg>`;
+}
+function textHTML(str,h,cls){return `<span class="tx f-${cls}" style="font-size:${(h*1.38).toFixed(1)}px">${str}</span>`}
+function render(str,h,font,isWord){
+  if(font==='led')return ledSVG(str,h);
+  if(font==='seg')return isWord?textHTML(str,h,'thin'):segSVG(str,h);
+  return textHTML(str,h,font);
+}
+
+/* ---------- relógio ---------- */
+const clockEl=$('clock'),dEl=$('dline'),wEl=$('wline'),wander=$('wander');
+const p2=n=>String(n).padStart(2,'0');
+let fitC=1,fitD=1,lastKey='';
+function draw(now){
+  let h=now.getHours(),ampm='';
+  if(!S.h24){ampm=h<12?'AM':'PM';h=h%12||12;}
+  const ts=p2(h)+':'+p2(now.getMinutes())+(S.sec?':'+p2(now.getSeconds()):'');
+  const ds=p2(now.getDate())+S.sep+p2(now.getMonth()+1)+S.sep+now.getFullYear();
+  const ws=WEEK[now.getDay()];
+  const key=[S.font,S.size,S.dateSize,S.sec,S.date,S.week,S.h24,S.sep,ts.length,innerWidth,innerHeight,ws].join('|');
+  if(key!==lastKey){fitC=1;fitD=1;}
+  const paint=()=>{
+    const H=innerHeight;
+    const hc=H*0.62*S.size/100*fitC, hd=H*0.16*S.dateSize/100*fitD;
+    clockEl.innerHTML=render(ts,hc,S.font)+(ampm?`<span class="ampm">${ampm}</span>`:'');
+    if(ampm)clockEl.querySelector('.ampm').style.fontSize=(hc*.3)+'px';
+    dEl.style.display=S.date?'flex':'none';wEl.style.display=S.week?'flex':'none';
+    dEl.style.marginTop=(hc*.22)+'px';wEl.style.marginTop=(hd*.45)+'px';
+    if(S.date)dEl.innerHTML=render(ds,hd,S.font);
+    if(S.week)wEl.innerHTML=render(ws,hd*(S.font==='led'?.85:.9),S.font,true);
+  };
+  paint();
+  if(key!==lastKey){
+    const W=innerWidth*.94;
+    fitC=Math.min(1,W/clockEl.scrollWidth);
+    fitD=Math.min(1,W/Math.max(1,S.date?dEl.scrollWidth:0,S.week?wEl.scrollWidth:0));
+    if(fitC<.999||fitD<.999)paint();
+    const kv=Math.min(1,innerHeight*.9/wander.scrollHeight);
+    if(kv<.999){fitC*=kv;fitD*=kv;paint();}
+    lastKey=key;
+  }
+}
+
+/* ---------- movimento anti-desgaste ---------- */
+let dx=0,dy=0,vx=0,vy=0;
+function drift(){
+  if(!+S.drift){wander.style.transform='translate(0,0)';return;}
+  const amp=[0,.25,.5,.8][S.drift];
+  const freeX=Math.max(0,(innerWidth-wander.offsetWidth)/2)*amp, freeY=Math.max(0,(innerHeight-wander.offsetHeight)/2)*amp;
+  if(!vx&&!vy){vx=Math.random()<.5?1:-1;vy=Math.random()<.5?.7:-.7;}
+  dx+=vx*2;dy+=vy*2;
+  if(dx>freeX){dx=freeX;vx=-Math.abs(vx)}if(dx<-freeX){dx=-freeX;vx=Math.abs(vx)}
+  if(dy>freeY){dy=freeY;vy=-Math.abs(vy)}if(dy<-freeY){dy=-freeY;vy=Math.abs(vy)}
+  wander.style.transform=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
+}
+
+/* ---------- brilho e cor ---------- */
+const toMin=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
+function isNight(d=new Date()){if(!S.night)return false;const m=d.getHours()*60+d.getMinutes(),a=toMin(S.ns),b=toMin(S.ne);return a<b?(m>=a&&m<b):(m>=a||m<b)}
+let alarmBoost=false;
+function curBri(){return alarmBoost?Math.max(70,S.bri):(isNight()?S.nbri:S.bri)}
+let lastScreen=-1;
+function applyLook(){
+  const night=isNight()&&!alarmBoost,b=curBri()/100;
+  document.documentElement.style.setProperty('--c',night&&S.ncolor?S.ncolor:S.color);
+  const op=BRIDGE?(.3+.7*b):(.04+.96*b);
+  document.documentElement.style.setProperty('--op',op.toFixed(3));
+  if(BRIDGE&&BRIDGE.setBrightness){const sb=Math.max(.01,b);if(Math.abs(sb-lastScreen)>.004){lastScreen=sb;try{BRIDGE.setBrightness(sb)}catch(e){}}}
+}
+
+/* ---------- rádio ---------- */
+const au=$('au');let playing=null,retry=0,sleepEnd=0,fadeTimer=null,radioState='';
+function setVol(v){au.volume=Math.max(0,Math.min(1,v/100))}
+function playRadio(k){
+  const r=S.radios.find(x=>x.k===k);if(!r)return;
+  clearInterval(fadeTimer);playing=k;S.last=k;save();retry=0;radioState='conectando…';
+  au.src=r.u;setVol(S.vol);au.play().catch(()=>{});buildBot();indicators();
+}
+function stopRadio(){playing=null;clearInterval(fadeTimer);au.pause();au.removeAttribute('src');au.load();sleepEnd=0;radioState='';buildBot();indicators()}
+au.addEventListener('playing',()=>{radioState='';indicators()});
+au.addEventListener('error',()=>{if(!playing||alarmOn)return;if(retry<3){retry++;radioState='reconectando…';indicators();setTimeout(()=>{if(playing){au.src=au.src;au.play().catch(()=>{})}},3000)}else{radioState='sem sinal';indicators()}});
+au.addEventListener('stalled',()=>{if(playing&&!alarmOn){setTimeout(()=>{if(playing&&au.readyState<3){au.load();au.play().catch(()=>{})}},8000)}});
+function setSleep(min){sleepEnd=min?Date.now()+min*60000:0;indicators();buildTop()}
+function sleepCheck(){
+  if(sleepEnd&&playing&&Date.now()>=sleepEnd){sleepEnd=0;let v=au.volume;const st=v/20;
+    clearInterval(fadeTimer);fadeTimer=setInterval(()=>{v-=st;if(v<=0){clearInterval(fadeTimer);stopRadio()}else au.volume=v},1000);}
+}
+
+/* ---------- alarme ---------- */
+const beepEl=$('beep');
+(function makeBeep(){const sr=8000,dur=1.2,n=Math.floor(sr*dur),buf=new DataView(new ArrayBuffer(44+n*2));
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)buf.setUint8(o+i,s.charCodeAt(i))};
+  ws(0,'RIFF');buf.setUint32(4,36+n*2,true);ws(8,'WAVEfmt ');buf.setUint32(16,16,true);buf.setUint16(20,1,true);buf.setUint16(22,1,true);
+  buf.setUint32(24,sr,true);buf.setUint32(28,sr*2,true);buf.setUint16(32,2,true);buf.setUint16(34,16,true);ws(36,'data');buf.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const t=i/sr;const on=(t<.15)||(t>.25&&t<.4);const v=on?Math.sin(2*Math.PI*1000*t)*.8*Math.min(1,(on?1:0)):0;buf.setInt16(44+i*2,v*32767,true)}
+  beepEl.src=URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));})();
+let alarmOn=null,rampT=null,ringStart=0,snoozeUntil=0,snoozeIdx=-1,lastFire='',fallbackT=null,wasPlaying=null;
+function fire(i){
+  const a=S.alarms[i];alarmOn={i,a};ringStart=Date.now();alarmBoost=true;applyLook();hideCtl();$('cfg').classList.remove('show');
+  wasPlaying=playing;$('alarm').classList.add('show');$('alSnooze').textContent=`Soneca ${a.snooze} min`;
+  $('alTime').textContent=p2(new Date().getHours())+':'+p2(new Date().getMinutes());
+  let level=5;const target=a.vol,step=(target-level)/Math.max(1,a.ramp);
+  const setL=()=>{const v=Math.max(0,Math.min(1,level/100));au.volume=v;beepEl.volume=v};
+  const useBeep=()=>{au.pause();beepEl.currentTime=0;beepEl.play().catch(()=>{});alarmOn.beep=true};
+  if(a.src==='beep'||!S.radios.find(r=>r.k===a.src))useBeep();
+  else{const r=S.radios.find(x=>x.k===a.src);playing=a.src;au.src=r.u;au.play().catch(()=>{});
+    fallbackT=setTimeout(()=>{if(alarmOn&&(au.paused||au.readyState<3))useBeep()},15000);}
+  setL();clearInterval(rampT);rampT=setInterval(()=>{level=Math.min(target,level+step);setL();
+    if(Date.now()-ringStart>15*60000)stopAlarm();},1000);
+}
+function endRing(){clearInterval(rampT);clearTimeout(fallbackT);beepEl.pause();$('alarm').classList.remove('show');alarmBoost=false;applyLook()}
+function stopAlarm(){if(!alarmOn)return;const radioAlarm=!alarmOn.beep&&alarmOn.a.src!=='beep';endRing();alarmOn=null;snoozeUntil=0;
+  if(!radioAlarm){if(!wasPlaying){au.pause()}}else{stopRadio()} setVol(S.vol);indicators()}
+function snooze(){if(!alarmOn)return;const m=alarmOn.a.snooze;snoozeIdx=alarmOn.i;snoozeUntil=Date.now()+m*60000;endRing();au.pause();playing=null;alarmOn=null;setVol(S.vol);buildBot();indicators()}
+$('alStop').onclick=stopAlarm;$('alSnooze').onclick=snooze;
+function alarmCheck(now){
+  if(alarmOn)return;
+  if(snoozeUntil&&Date.now()>=snoozeUntil){snoozeUntil=0;fire(snoozeIdx);return;}
+  const hm=p2(now.getHours())+':'+p2(now.getMinutes()),key=hm+now.toDateString();
+  if(key===lastFire)return;
+  S.alarms.forEach((a,i)=>{if(!alarmOn&&a.on&&a.time===hm&&a.days[now.getDay()]){lastFire=key;fire(i)}});
+}
+function nextAlarm(){const now=new Date();let best=null;
+  S.alarms.forEach(a=>{if(!a.on||!a.days.some(Boolean))return;for(let d=0;d<8;d++){const t=new Date(now);t.setDate(now.getDate()+d);const[h,m]=a.time.split(':').map(Number);t.setHours(h,m,0,0);
+    if(t>now&&a.days[t.getDay()]){if(!best||t<best)best=t;break;}}});return best}
+
+/* ---------- indicadores ---------- */
+function indicators(){
+  const r=playing&&!alarmOn?S.radios.find(x=>x.k===playing):null;
+  $('iRadio').textContent=r?('♪ '+r.n+(radioState?' · '+radioState:'')):'';
+  $('iSleep').textContent=sleepEnd?('⏾ '+Math.ceil((sleepEnd-Date.now())/60000)+' min'):'';
+  const na=nextAlarm();
+  $('iAlarm').textContent=snoozeUntil?('⏰ soneca '+Math.ceil((snoozeUntil-Date.now())/60000)+' min'):(na?('⏰ '+p2(na.getHours())+':'+p2(na.getMinutes())):'');
+}
+
+/* ---------- controles na tela ---------- */
+const ctl=$('ctl');let hideT;
+function showCtl(){buildTop();buildBot();ctl.classList.add('show');clearTimeout(hideT);hideT=setTimeout(hideCtl,7000)}
+function hideCtl(){ctl.classList.remove('show')}
+ctl.addEventListener('pointerdown',e=>{e.stopPropagation();clearTimeout(hideT);hideT=setTimeout(hideCtl,7000)});
+function buildBot(){
+  const b=$('bot');b.innerHTML='';
+  const stop=document.createElement('button');stop.className='btn big'+(playing?' on':'');stop.textContent=playing?'■ Parar':'▶ Tocar';
+  stop.onclick=()=>playing?stopRadio():playRadio(S.last||S.radios[0].k);b.appendChild(stop);
+  S.radios.forEach(r=>{const x=document.createElement('button');x.className='btn'+(playing===r.k?' on':'');x.textContent=r.k;x.title=r.n;
+    x.onclick=()=>playing===r.k?stopRadio():playRadio(r.k);b.appendChild(x)});
+}
+const SLEEPS=[0,15,30,45,60,90,120];
+function buildTop(){const rem=sleepEnd?Math.ceil((sleepEnd-Date.now())/60000):0;$('bSleep').textContent=rem?`⏾ ${rem} min`:'⏾ Timer';$('bSleep').classList.toggle('on',!!rem)}
+$('bSleep').onclick=()=>{const rem=sleepEnd?Math.ceil((sleepEnd-Date.now())/60000):0;let i=SLEEPS.findIndex(s=>s>=rem&&s!==0&&s>rem-1);
+  if(rem===0)i=SLEEPS.indexOf(S.sleepDef);else{i=SLEEPS.findIndex(s=>s>rem);if(i<0)i=0;}
+  setSleep(SLEEPS[i]||0);if(SLEEPS[i]&&!playing)playRadio(S.last);hud('Desligar rádio em',SLEEPS[i]?SLEEPS[i]+' min':'desligado',null)};
+$('bFont').onclick=()=>{const i=FONTS.findIndex(f=>f[0]===S.font);S.font=FONTS[(i+1)%FONTS.length][0];save();lastKey='';tick(true);hud('Fonte',FONTS.find(f=>f[0]===S.font)[1],null)};
+$('bFull').onclick=toggleFull;
+$('bCfg').onclick=()=>{hideCtl();openCfg()};
+function toggleFull(){const d=document,el=d.documentElement;
+  if(d.fullscreenElement||d.webkitFullscreenElement){(d.exitFullscreen||d.webkitExitFullscreen).call(d)}
+  else{const f=el.requestFullscreen||el.webkitRequestFullscreen;if(f)f.call(el).catch?.(()=>{})}}
+
+/* ---------- HUD ---------- */
+let hudT;function hud(t,v,pct){$('hudT').textContent=t+': '+v;$('hudB').parentNode.style.display=pct==null?'none':'block';if(pct!=null)$('hudB').style.width=pct+'%';
+  $('hud').style.display='block';clearTimeout(hudT);hudT=setTimeout(()=>$('hud').style.display='none',1200)}
+
+/* ---------- gestos ---------- */
+const pts=new Map();let g0=null;
+const stage=document.body;
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#ctl .row,#cfg,#alarm'))return;
+  pts.set(e.pointerId,{x:e.clientX,y:e.clientY});unlockAudio();wake();
+  if(pts.size===1)g0={type:'tap',x:e.clientX,y:e.clientY,t:Date.now(),side:e.clientX<innerWidth/2?'L':'R',bri:isNight()?S.nbri:S.bri,vol:S.vol};
+  else if(pts.size===2){const[a,b]=[...pts.values()];g0={type:'pinch',d:Math.hypot(a.x-b.x,a.y-b.y),size:S.size};}
+});
+stage.addEventListener('pointermove',e=>{
+  if(!pts.has(e.pointerId)||!g0)return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(g0.type==='pinch'&&pts.size===2){const[a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);
+    S.size=Math.round(Math.max(15,Math.min(100,g0.size*d/g0.d)));lastKey='';tick(true);hud('Tamanho',S.size+'%',(S.size-15)/85*100);save();return;}
+  const dyy=g0.y-e.clientY,dxx=e.clientX-g0.x;
+  if(g0.type==='tap'&&Math.abs(dyy)>18&&Math.abs(dyy)>Math.abs(dxx))g0.type='slide';
+  if(g0.type==='slide'){const delta=dyy/(innerHeight*.6)*100;
+    if(g0.side==='L'){const v=Math.round(Math.max(1,Math.min(100,g0.bri+delta)));if(isNight())S.nbri=v;else S.bri=v;applyLook();hud(isNight()?'Brilho (noite)':'Brilho',v+'%',v)}
+    else{const v=Math.round(Math.max(0,Math.min(100,g0.vol+delta)));S.vol=v;if(!alarmOn)setVol(v);hud('Volume',v+'%',v)}
+    save();}
+});
+const up=e=>{if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
+  if(g0&&g0.type==='tap'&&pts.size===0&&Date.now()-g0.t<400){ctl.classList.contains('show')?hideCtl():showCtl()}
+  if(pts.size===0)g0=null;};
+stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+
+/* ---------- áudio / tela ligada ---------- */
+let unlocked=false;function unlockAudio(){if(unlocked)return;unlocked=true;beepEl.volume=0;beepEl.play().then(()=>{beepEl.pause();beepEl.volume=1}).catch(()=>{})}
+let wl=null;async function wake(){try{if('wakeLock'in navigator&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>wl=null)}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wake()});
+
+/* ---------- painel de configurações ---------- */
+function openCfg(){fillCfg();$('cfg').classList.add('show')}
+$('cfgClose').onclick=()=>{$('cfg').classList.remove('show');lastKey='';tick(true)};
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  document.querySelectorAll('.pg').forEach(p=>p.classList.toggle('on',p.id===t.dataset.p))});
+function bindRange(id,key,vid,suf='%',cb){const el=$(id);el.value=S[key];$(vid).textContent=S[key]+suf;
+  el.oninput=()=>{S[key]=+el.value;$(vid).textContent=el.value+suf;save();cb&&cb()}}
+function bindCheck(id,key,cb){const el=$(id);el.checked=!!S[key];el.onchange=()=>{S[key]=el.checked;save();lastKey='';cb&&cb();tick(true)}}
+function fillCfg(){
+  // fontes
+  const fb=$('fontBox');fb.innerHTML='';
+  FONTS.forEach(([k,n])=>{const c=document.createElement('button');c.className='chip'+(S.font===k?' on':'');
+    c.innerHTML=`<div class="fontprev">${render('12:34',34,k)}</div><span>${n}</span>`;
+    c.onclick=()=>{S.font=k;save();lastKey='';fillCfg()};fb.appendChild(c)});
+  bindRange('sSize','size','vSize','%',()=>{lastKey=''});bindRange('sDate','dateSize','vDate','%',()=>{lastKey=''});
+  bindCheck('cSec','sec');bindCheck('cDate','date');bindCheck('cWeek','week');bindCheck('c24','h24');bindCheck('cGhost','ghost',fillCfgFonts);
+  $('sSep').value=S.sep;$('sSep').onchange=e=>{S.sep=e.target.value;save();lastKey=''};
+  $('sDrift').value=S.drift;$('sDrift').onchange=e=>{S.drift=+e.target.value;save()};
+  // cores
+  const mkCols=(box,key,allowNone)=>{box.innerHTML='';
+    if(allowNone){const c=document.createElement('button');c.className='chip'+(!S[key]?' on':'');c.textContent='Mesma do dia';c.onclick=()=>{S[key]='';save();fillCfg();applyLook()};box.appendChild(c)}
+    COLORS.forEach(([n,v])=>{const c=document.createElement('button');c.className='sw8'+(S[key]===v?' on':'');c.style.background=v;c.title=n;
+      c.onclick=()=>{S[key]=v;save();fillCfg();applyLook()};box.appendChild(c)})};
+  mkCols($('colBox'),'color');mkCols($('ncolBox'),'ncolor',true);
+  $('cCustom').value=S.color;$('cCustom').oninput=e=>{S.color=e.target.value;save();applyLook()};
+  bindRange('sBri','bri','vBri','%',applyLook);bindRange('sNBri','nbri','vNBri','%',applyLook);
+  bindCheck('cNight','night',applyLook);
+  $('tNs').value=S.ns;$('tNe').value=S.ne;$('tNs').onchange=e=>{S.ns=e.target.value;save();applyLook()};$('tNe').onchange=e=>{S.ne=e.target.value;save();applyLook()};
+  $('briNote').textContent=BRIDGE?'No app, o brilho controla a luz da própria tela e a intensidade do texto.':'No navegador só dá para escurecer o texto. A luz da tela em si é controlada pelo app Android.';
+  // rádios
+  bindRange('sVol','vol','vVol','%',()=>{if(!alarmOn)setVol(S.vol)});
+  const sd=$('sSleepDef');sd.innerHTML=SLEEPS.filter(Boolean).map(m=>`<option value="${m}">${m} min</option>`).join('');sd.value=S.sleepDef;sd.onchange=e=>{S.sleepDef=+e.target.value;save()};
+  radList();alList();
+}
+function fillCfgFonts(){fillCfg()}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function radList(){const L=$('radList');L.innerHTML='';
+  S.radios.forEach((r,i)=>{const d=document.createElement('div');d.className='rad';
+    d.innerHTML=`<input value="${esc(r.k)}" maxlength="5"><input value="${esc(r.n)}"><input value="${esc(r.u)}" type="url"><button class="x">✕</button>`;
+    const [k,n,u,x]=d.children;
+    k.onchange=()=>{const old=r.k;r.k=k.value.toUpperCase().trim()||old;k.value=r.k;S.alarms.forEach(a=>{if(a.src===old)a.src=r.k});if(S.last===old)S.last=r.k;save()};
+    n.onchange=()=>{r.n=n.value;save()};u.onchange=()=>{r.u=u.value.trim();save()};
+    x.onclick=()=>{if(S.radios.length<2)return;S.radios.splice(i,1);save();radList()};L.appendChild(d)})}
+$('radAdd').onclick=()=>{S.radios.push({k:'NOVA',n:'Nova rádio',u:'https://'});save();radList()};
+$('radReset').onclick=()=>{S.radios=JSON.parse(JSON.stringify(RADIOS_DEF));save();radList()};
+const DN=['D','S','T','Q','Q','S','S'];
+function alList(){const L=$('alList');L.innerHTML='';
+  S.alarms.forEach((a,i)=>{const c=document.createElement('div');c.className='card';
+    c.innerHTML=`<h3>Alarme ${i+1} <label class="sw"><input type="checkbox" ${a.on?'checked':''}><span></span></label></h3>
+    <div class="it"><label>Hora</label><input type="time" value="${a.time}"></div>
+    <div class="it" style="display:block"><label>Dias</label><div class="days" style="margin-top:6px"></div></div>
+    <div class="it"><label>Tocar</label><select><option value="beep">Bipe</option>${S.radios.map(r=>`<option value="${esc(r.k)}">Rádio ${esc(r.n)}</option>`).join('')}</select></div>
+    <div class="it"><label>Volume máximo</label><input type="range" min="10" max="100" value="${a.vol}"><span class="val">${a.vol}%</span></div>
+    <div class="it"><label>Subir o volume em</label><select><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option></select></div>
+    <div class="it"><label>Soneca</label><select><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
+    <div class="it"><button class="btn" style="font-size:14px">▶ Testar este alarme</button></div>`;
+    const q=s=>c.querySelectorAll(s);
+    const [sw]=q('h3 input'),[tm]=q('input[type=time]'),sels=q('select'),[rg]=q('input[type=range]'),[vv]=q('.val'),[test]=q('.btn');
+    sw.onchange=()=>{a.on=sw.checked;save();indicators()};tm.onchange=()=>{a.time=tm.value;save();indicators()};
+    sels[0].value=a.src;sels[0].onchange=()=>{a.src=sels[0].value;save()};
+    sels[1].value=a.ramp;sels[1].onchange=()=>{a.ramp=+sels[1].value;save()};
+    sels[2].value=a.snooze;sels[2].onchange=()=>{a.snooze=+sels[2].value;save()};
+    rg.oninput=()=>{a.vol=+rg.value;vv.textContent=a.vol+'%';save()};
+    test.onclick=()=>{$('cfg').classList.remove('show');fire(i)};
+    const dbox=c.querySelector('.days');DN.forEach((n,d)=>{const b=document.createElement('button');b.className='chip'+(a.days[d]?' on':'');b.textContent=n;
+      b.onclick=()=>{a.days[d]=a.days[d]?0:1;b.classList.toggle('on');save();indicators()};dbox.appendChild(b)});
+    L.appendChild(c)})}
+$('bResetAll').onclick=()=>{if(!confirmReset())return;try{localStorage.removeItem('rrd')}catch(e){}load();lastKey='';fillCfg();applyLook();tick(true)};
+let resetArm=0;function confirmReset(){if(Date.now()-resetArm<3000)return true;resetArm=Date.now();$('bResetAll').textContent='Toque de novo para confirmar';setTimeout(()=>$('bResetAll').textContent='Restaurar todas as configurações',3000);return false}
+
+/* ---------- laço principal ---------- */
+let lastSec=-1,tickN=0;
+function tick(force){const now=new Date();const s=now.getSeconds();
+  if(s!==lastSec||force){lastSec=s;draw(now);if(!force){alarmCheck(now);sleepCheck();tickN++;if(tickN%2===0)drift();if(s===0||tickN%10===0){applyLook();indicators();buildTop()}}}}
+setInterval(tick,200);
+addEventListener('resize',()=>{lastKey='';tick(true)});
+applyLook();indicators();tick(true);drift();wake();
+window.__rr={fire,S,openCfg};
+})();
+</script>
+</body>
+</html>
