@@ -87,6 +87,16 @@ svg{display:block;overflow:visible}
 .rad input{width:100%;background:#151515;color:#ddd;border:1px solid #333;border-radius:8px;padding:7px;font-size:13px}
 .x{background:#2a1515;color:#f88;border:1px solid #533;border-radius:8px;height:34px}
 .small{font-size:12px;color:#777;line-height:1.5}
+.help h3{margin:4px 0 8px}
+.help table{width:100%;border-collapse:collapse;font-size:15px}
+.help td{padding:9px 6px;border-bottom:1px solid #1d1d1d;vertical-align:top;color:#ccc}
+.help td:first-child{width:42%;color:var(--c);font-weight:600}
+.help .tag{font-size:11px;font-weight:600;color:#000;background:var(--c);border-radius:8px;padding:2px 7px;margin-left:6px;vertical-align:middle}
+.scr{display:grid;grid-template-columns:1fr 1fr;border:2px solid #333;border-radius:14px;height:170px;padding-bottom:40px;position:relative;margin:6px 0 10px;overflow:hidden}
+.scr div{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;color:#bbb;text-align:center;gap:4px}
+.scr div:first-child{border-right:1px dashed #333}
+.scr b{color:var(--c);font-size:22px;line-height:1}
+.scr .mid{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);background:#0b0b0b;border:1px solid #333;border-radius:20px;padding:6px 12px;font-size:13px;color:#ddd;white-space:nowrap}
 .about{text-align:center;padding:30px 10px;color:#bbb;line-height:1.8}
 .about b{color:var(--c);font-size:20px}
 a{color:var(--c)}
@@ -124,6 +134,7 @@ a{color:var(--c)}
     <button class="tab" data-p="pCor">Cor e brilho</button>
     <button class="tab" data-p="pRad">Rádios</button>
     <button class="tab" data-p="pAl">Alarmes</button>
+    <button class="tab" data-p="pAju">Ajuda</button>
     <button class="tab" data-p="pSob">Sobre</button>
   </div>
   <div id="cfgBody">
@@ -138,8 +149,8 @@ a{color:var(--c)}
       <div class="it"><label>Separador da data</label><select id="sSep"><option value=".">19.11.2026</option><option value="/">19/11/2026</option><option value="-">19-11-2026</option></select></div>
       <div class="it"><label>Movimento contra desgaste da tela</label><select id="sDrift"><option value="0">Desligado</option><option value="1">Suave</option><option value="2">Médio</option><option value="3">Amplo</option></select></div>
       <div class="it"><label>LEDs apagados visíveis (fonte Pontinhos e 7 segmentos)</label><label class="sw"><input type="checkbox" id="cGhost"><span></span></label></div>
-      <p class="small">No computador: roda do mouse muda o tamanho; F = tela cheia; espaço = tocar/parar; setas ↑↓ = volume; ←→ = brilho.</p>
-      <p class="small">Atalhos na tela: pinça com dois dedos muda o tamanho; arrastar no lado esquerdo muda o brilho; no lado direito, o volume. Toque rápido mostra os botões.</p>
+      
+      <p class="small">Gestos, teclas e botões estão explicados na aba Ajuda.</p>
     </div>
 
     <div class="pg" id="pCor">
@@ -175,6 +186,66 @@ a{color:var(--c)}
       <p class="small">Se a rádio escolhida não tocar em 15 segundos (internet fora, por exemplo), o alarme troca sozinho para o bipe. O volume sobe aos poucos até o máximo escolhido.</p>
     </div>
 
+    <div class="pg help" id="pAju">
+      <div class="card" id="hTouch">
+        <h3>Tela de toque <span class="tag">tablet e celular</span></h3>
+        <div class="scr">
+          <div><b>↕</b>Arraste para cima ou para baixo<br><strong style="color:#eee">BRILHO</strong></div>
+          <div><b>↕</b>Arraste para cima ou para baixo<br><strong style="color:#eee">VOLUME</strong></div>
+          <span class="mid">toque rápido = mostra os botões</span>
+        </div>
+        <table>
+          <tr><td>Toque rápido</td><td>Mostra ou esconde os botões (somem sozinhos em 7 segundos)</td></tr>
+          <tr><td>Pinça com dois dedos</td><td>Abrir os dedos aumenta a hora; fechar diminui</td></tr>
+          <tr><td>Arrastar no lado esquerdo</td><td>Para cima clareia, para baixo escurece</td></tr>
+          <tr><td>Arrastar no lado direito</td><td>Para cima aumenta o volume, para baixo diminui</td></tr>
+          <tr><td>Botão voltar do Android</td><td>Toque duas vezes seguidas para sair do app</td></tr>
+        </table>
+      </div>
+      <div class="card" id="hPc">
+        <h3>Computador <span class="tag">teclado e mouse</span></h3>
+        <table>
+          <tr><td>Clique na tela</td><td>Mostra ou esconde os botões</td></tr>
+          <tr><td>Roda do mouse</td><td>Para cima aumenta a hora; para baixo diminui</td></tr>
+          <tr><td>Tecla F</td><td>Liga ou desliga a tela cheia</td></tr>
+          <tr><td>Barra de espaço</td><td>Toca ou para a rádio</td></tr>
+          <tr><td>Setas ↑ e ↓</td><td>Volume</td></tr>
+          <tr><td>Setas ← e →</td><td>Brilho</td></tr>
+          <tr><td>Esc</td><td>Esconde os botões</td></tr>
+          <tr><td>Clicar e arrastar</td><td>Funciona igual ao toque: lado esquerdo brilho, lado direito volume</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Botões</h3>
+        <table>
+          <tr><td>Tocar / Parar</td><td>Liga a última rádio ouvida ou desliga a que está tocando</td></tr>
+          <tr><td>DIAR, MLDY, JPNW…</td><td>Escolhe a rádio. Tocar de novo na mesma desliga</td></tr>
+          <tr><td>Timer</td><td>Desliga a rádio sozinha. Cada toque muda o tempo: 15, 30, 45, 60, 90, 120 min e desligado. O volume abaixa devagar no final</td></tr>
+          <tr><td>Fonte</td><td>Troca o estilo dos números a cada toque</td></tr>
+          <tr id="hFull"><td>Tela cheia</td><td>Esconde as barras do navegador (só no computador; no app a tela já é cheia)</td></tr>
+          <tr><td>Engrenagem</td><td>Abre estas configurações</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Alarme</h3>
+        <table>
+          <tr><td>Soneca</td><td>Para o som e toca de novo depois de 5, 10 ou 15 minutos (escolha na aba Alarmes)</td></tr>
+          <tr><td>Desligar</td><td>Encerra o alarme até o próximo dia programado</td></tr>
+          <tr><td>Sem internet</td><td>Se a rádio não tocar em 15 segundos, toca o bipe no lugar</td></tr>
+          <tr><td>Sino no canto da tela</td><td>Mostra a hora do próximo alarme ligado</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Dicas</h3>
+        <table>
+          <tr><td>Para dormir</td><td>Ligue o Modo noite (aba Cor e brilho): à noite o brilho cai e a cor pode mudar para vermelho ou âmbar</td></tr>
+          <tr><td>Tablet sempre no app</td><td>Ative a Fixação de tela do Android (Configurações › Segurança) para ninguém sair do app sem querer</td></tr>
+          <tr><td>No Windows</td><td>Desligue o protetor de tela; o relógio já pede para a tela não apagar</td></tr>
+          <tr><td>Desgaste da tela</td><td>O relógio anda devagar pela tela de propósito. Ajuste em Relógio › Movimento</td></tr>
+        </table>
+      </div>
+    </div>
+
     <div class="pg" id="pSob">
       <div class="about">
         <b>Rádio Relógio do Daniel</b><br>
@@ -202,7 +273,7 @@ a{color:var(--c)}
 'use strict';
 const $=id=>document.getElementById(id);
 const BRIDGE=window.AndroidApp||null;
-const APP_VERSION='1.1';
+const APP_VERSION='1.2';
 const MOON='<svg class=ic viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>',BELL='<svg class=ic viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 0 0 2.4-2h-4.8a2.5 2.5 0 0 0 2.4 2zm7-6V11a7 7 0 0 0-5.5-6.8V3.5a1.5 1.5 0 0 0-3 0v.7A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>';
 
 /* ---------- configurações ---------- */
@@ -427,7 +498,10 @@ $('bSleep').onclick=()=>{const rem=sleepEnd?Math.ceil((sleepEnd-Date.now())/6000
   setSleep(SLEEPS[i]||0);if(SLEEPS[i]&&!playing)playRadio(S.last);hud('Desligar rádio em',SLEEPS[i]?SLEEPS[i]+' min':'desligado',null)};
 $('bFont').onclick=()=>{const i=FONTS.findIndex(f=>f[0]===S.font);S.font=FONTS[(i+1)%FONTS.length][0];save();lastKey='';tick(true);hud('Fonte',FONTS.find(f=>f[0]===S.font)[1],null)};
 $('bFull').onclick=toggleFull;
-if(BRIDGE)$('bFull').style.display='none';
+if(BRIDGE){$('bFull').style.display='none';}
+else{const h=$('pAju');h.insertBefore($('hPc'),$('hTouch'));}
+// dica na primeira vez
+try{if(!localStorage.getItem('rrdHint')){localStorage.setItem('rrdHint','1');setTimeout(()=>{hud('Dica',BRIDGE?'toque na tela para ver os botões':'clique na tela para ver os botões · F = tela cheia',null);clearTimeout(hudT);hudT=setTimeout(()=>$('hud').style.display='none',6000)},1500)}}catch(e){}
 $('appVer').textContent=APP_VERSION+(BRIDGE?' (Android)':' (navegador)');
 document.title='Rádio Relógio do Daniel '+APP_VERSION;
 // computador: roda do mouse = tamanho; teclas F, espaço, setas
