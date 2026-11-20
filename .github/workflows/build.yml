@@ -23,7 +23,9 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk "RadioRelogioDoDaniel-v$VER.apk"
           cp app/src/main/assets/index.html "RadioRelogioDoDaniel-v$VER.html"
       - uses: actions/upload-artifact@v4
-        with: { name: RadioRelogioDoDaniel-v${{ env.VER }}, path: "RadioRelogioDoDaniel-v*" }
+        with:
+          name: RadioRelogioDoDaniel-v${{ env.VER }}
+          path: RadioRelogioDoDaniel-v*
       - name: Publicar versão para baixar no celular
         uses: softprops/action-gh-release@v2
         with:
